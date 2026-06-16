@@ -19,7 +19,22 @@ public class Main {
             HttpClient client = HttpClient.newHttpClient();
 
             validateAuthentication(client, notionToken);
-            searchNotion(client, notionToken, "Master Tasklist");
+            String[] targets = {
+                "Master Tasklist",
+                "Workstreams",
+                "Jarvis Development",
+                "Focus Queue",
+                "Backlog",
+                "Completed Tasks",
+                "Reading Dashboard",
+                "RP Command Station",
+                "Spartan 2027",
+                "Nursing School HQ"
+            };
+
+            for (String target : targets) {
+                searchNotion(client, notionToken, target);
+            }
 
         } catch (Exception e) {
             System.out.println("❌ Mark I test failed.");
