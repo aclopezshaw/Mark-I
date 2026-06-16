@@ -1,3 +1,5 @@
+package com.jarvis.markone;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -85,8 +87,23 @@ public class Main {
 
         if (response.statusCode() == 200) {
             System.out.println("✅ Search request successful.");
-            System.out.println("Raw response:");
-            System.out.println(response.body());
+
+            String body = response.body();
+
+            System.out.println("Response length: " + body.length());
+
+            System.out.println("Looking for IDs in the response...");
+            int idIndex = body.indexOf("\"id\":");
+
+            if (idIndex >= 0) {
+                System.out.println("First ID found near:");
+                System.out.println(
+                    body.substring(
+                        idIndex,
+                        Math.min(idIndex + 100, body.length())
+                    )
+                );
+            }
         } else {
             System.out.println("❌ Search request failed.");
             System.out.println(response.body());
