@@ -1,9 +1,10 @@
 package com.jarvis.markone;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import com.jarvis.markone.models.DatabaseRegistryItem;
+import com.jarvis.markone.models.TaskItem;
+import com.jarvis.markone.models.WorkstreamItem;
+import com.jarvis.markone.services.NotionService;
+
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -18,95 +19,52 @@ public class Main {
                 return;
             }
 
-            HttpClient client = HttpClient.newHttpClient();
+            NotionService notionService = new NotionService(notionToken);
 
-            validateAuthentication(client, notionToken);
-            String[] targets = {
-                "Master Tasklist",
-                "Workstreams",
-                "Jarvis Development",
-                "Focus Queue",
-                "Backlog",
-                "Completed Tasks",
-                "Reading Dashboard",
-                "RP Command Station",
-                "Spartan 2027",
-                "Nursing School HQ"
-            };
-
-            for (String target : targets) {
-                searchNotion(client, notionToken, target);
+            if (!notionService.validateAuthentication()) {
+                return;
             }
+
+            System.out.println();
+            System.out.println("=== Database Registry Items ===");
+            for (DatabaseRegistryItem item : notionService.getDatabaseRegistryItems()) {
+                System.out.println(item);
+            }
+
+            System.out.println();
+            System.out.println("=== Master Tasklist Items ===");
+            for (TaskItem task : notionService.getMasterTasklistItems()) {
+                System.out.println(task);
+            }
+
+            System.out.println();
+            System.out.println("=== Focus Queue Items ===");
+            for (TaskItem task : notionService.getFocusQueueItems()) {
+                System.out.println(task);
+            }
+
+            System.out.println();
+            System.out.println("=== Projects ===");
+            String projects = notionService.getProjects();
+            System.out.println("Projects response length: " + projects.length());
+
+            System.out.println();
+            System.out.println("=== Workstream Items ===");
+            for (WorkstreamItem workstream : notionService.getWorkstreamItems()) {
+                System.out.println(workstream);
+            }
+
+            System.out.println();
+            System.out.println("=== Workout Log ===");
+            String workoutLog = notionService.getWorkoutLog();
+            System.out.println("Workout Log response length: " + workoutLog.length());
+
+            System.out.println();
+            System.out.println("✅ Mark I read-only Notion service layer smoke test complete.");
 
         } catch (Exception e) {
-            System.out.println("❌ Mark I test failed.");
+            System.out.println("❌ Mark I service layer test failed.");
             e.printStackTrace();
-        }
-    }
-
-    private static void validateAuthentication(HttpClient client, String notionToken) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.notion.com/v1/users/me"))
-                .header("Authorization", "Bearer " + notionToken)
-                .header("Notion-Version", "2022-06-28")
-                .GET()
-                .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        System.out.println("Authentication status code: " + response.statusCode());
-
-        if (response.statusCode() == 200) {
-            System.out.println("✅ Mark I authenticated with Notion.");
-        } else {
-            System.out.println("❌ Notion authentication failed.");
-            System.out.println(response.body());
-        }
-    }
-
-    private static void searchNotion(HttpClient client, String notionToken, String query) throws Exception {
-        String requestBody = """
-                {
-                  "query": "%s",
-                  "page_size": 10
-                }
-                """.formatted(query);
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.notion.com/v1/search"))
-                .header("Authorization", "Bearer " + notionToken)
-                .header("Notion-Version", "2022-06-28")
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        System.out.println();
-        System.out.println("Search status code: " + response.statusCode());
-
-        if (response.statusCode() == 200) {
-            System.out.println("✅ Search request successful.");
-
-            String body = response.body();
-
-            System.out.println("Response length: " + body.length());
-
-            System.out.println("Looking for IDs in the response...");
-            int idIndex = body.indexOf("\"id\":");
-
-            if (idIndex >= 0) {
-                System.out.println("First ID found near:");
-                System.out.println(
-                    body.substring(
-                        idIndex,
-                        Math.min(idIndex + 100, body.length())
-                    )
-                );
-            }
-        } else {
-            System.out.println("❌ Search request failed.");
-            System.out.println(response.body());
         }
     }
 
