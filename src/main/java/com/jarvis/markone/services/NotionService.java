@@ -464,6 +464,27 @@ public class NotionService {
         throw new IllegalArgumentException("Workstream not found: " + workstreamName);
     }
 
+    public String updateTaskStatus(String pageId, String status) throws Exception {
+        String body = """
+        {
+        "properties": {
+            "Status": {
+            "select": {
+                "name": "%s"
+            }
+            }
+        }
+        }
+        """.formatted(status);
+
+        HttpRequest request = baseRequest("https://api.notion.com/v1/pages/" + pageId)
+                .header("Content-Type", "application/json")
+                .method("PATCH", HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        return send(request);
+    }
+
     private HttpRequest.Builder baseRequest(String url) {
         return HttpRequest.newBuilder()
                 .uri(URI.create(url))

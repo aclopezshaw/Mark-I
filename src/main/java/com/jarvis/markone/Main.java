@@ -56,9 +56,10 @@ public class Main {
                 System.out.println(workstream);
             }
 
+            /*
             System.out.println();
             System.out.println("=== MK1-006 Test ===");
-            String result = notionService.createTaskByName(
+            String mk6Result = notionService.createTaskByName(
                     "MK1-006 Name Resolver Test Task",
                     "Active",
                     "Low",
@@ -67,7 +68,16 @@ public class Main {
                     "Jarvis Command Center",
                     "Review and Maintenance"
             );
-            System.out.println(result);
+            System.out.println(mk6Result);
+
+            System.out.println();
+            System.out.println("=== MK1-007 Test ===");
+            String mk7Result = notionService.updateTaskStatus(
+                    "385bc7d80f4581cab1a3ff26a9cf9107",
+                    "Complete"
+            );
+            System.out.println(mk7Result);
+            */
 
             System.out.println();
             System.out.println("=== Workout Log ===");
