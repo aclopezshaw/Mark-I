@@ -79,6 +79,16 @@ public class Main {
             System.out.println(mk7Result);
             */
 
+           System.out.println();
+            System.out.println("=== MK1-008 Test ===");
+
+            String focusResult = notionService.updateTaskFocus(
+                    "385bc7d80f45813fada4f78611656975",
+                    true
+            );
+
+            System.out.println(focusResult);
+
             System.out.println();
             System.out.println("=== Workout Log ===");
             String workoutLog = notionService.getWorkoutLog();

@@ -485,6 +485,25 @@ public class NotionService {
         return send(request);
     }
 
+    public String updateTaskFocus(String pageId, boolean focus) throws Exception {
+        String body = """
+        {
+        "properties": {
+            "Focus": {
+            "checkbox": %s
+            }
+        }
+        }
+        """.formatted(focus);
+
+        HttpRequest request = baseRequest("https://api.notion.com/v1/pages/" + pageId)
+                .header("Content-Type", "application/json")
+                .method("PATCH", HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        return send(request);
+    }
+
     private HttpRequest.Builder baseRequest(String url) {
         return HttpRequest.newBuilder()
                 .uri(URI.create(url))
