@@ -1,6 +1,7 @@
 package com.jarvis.markone;
 
 import com.jarvis.markone.models.DatabaseRegistryItem;
+import com.jarvis.markone.models.ProjectItem;
 import com.jarvis.markone.models.TaskItem;
 import com.jarvis.markone.models.WorkstreamItem;
 import com.jarvis.markone.services.NotionService;
@@ -44,15 +45,29 @@ public class Main {
             }
 
             System.out.println();
-            System.out.println("=== Projects ===");
-            String projects = notionService.getProjects();
-            System.out.println("Projects response length: " + projects.length());
+            System.out.println("=== Project Items ===");
+            for (ProjectItem project : notionService.getProjectItems()) {
+                System.out.println(project);
+            }
 
             System.out.println();
             System.out.println("=== Workstream Items ===");
             for (WorkstreamItem workstream : notionService.getWorkstreamItems()) {
                 System.out.println(workstream);
             }
+
+            System.out.println();
+            System.out.println("=== MK1-006 Test ===");
+            String result = notionService.createTaskByName(
+                    "MK1-006 Name Resolver Test Task",
+                    "Active",
+                    "Low",
+                    false,
+                    "Created by Mark I using project/workstream name resolution.",
+                    "Jarvis Command Center",
+                    "Review and Maintenance"
+            );
+            System.out.println(result);
 
             System.out.println();
             System.out.println("=== Workout Log ===");

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jarvis.markone.config.NotionConfig;
 import com.jarvis.markone.models.DatabaseRegistryItem;
+import com.jarvis.markone.models.ProjectItem;
 import com.jarvis.markone.models.TaskItem;
 import com.jarvis.markone.models.WorkstreamItem;
 
@@ -54,18 +55,52 @@ public class NotionService {
     }
 
     public String queryDatabase(String databaseId) throws Exception {
-        String requestBody = """
+        List<JsonNode> allResults = new ArrayList<>();
+        String nextCursor = null;
+        boolean hasMore;
+
+        do {
+            String requestBody;
+
+            if (nextCursor == null) {
+                requestBody = """
                 {
-                  "page_size": 10
+                "page_size": 100
                 }
                 """;
+            } else {
+                requestBody = """
+                {
+                "page_size": 100,
+                "start_cursor": "%s"
+                }
+                """.formatted(nextCursor);
+            }
 
-        HttpRequest request = baseRequest("https://api.notion.com/v1/databases/" + databaseId + "/query")
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
+            HttpRequest request = baseRequest("https://api.notion.com/v1/databases/" + databaseId + "/query")
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
 
-        return send(request);
+            String responseJson = send(request);
+            JsonNode root = objectMapper.readTree(responseJson);
+
+            for (JsonNode result : root.path("results")) {
+                allResults.add(result);
+            }
+
+            hasMore = root.path("has_more").asBoolean(false);
+            nextCursor = root.path("next_cursor").isNull()
+                    ? null
+                    : root.path("next_cursor").asText(null);
+
+        } while (hasMore && nextCursor != null);
+
+        return objectMapper.writeValueAsString(
+                objectMapper.createObjectNode()
+                        .put("object", "list")
+                        .set("results", objectMapper.valueToTree(allResults))
+        );
     }
 
     public String search(String query) throws Exception {
@@ -238,21 +273,196 @@ public class NotionService {
         return items;
     }
 
-private String getCellText(JsonNode cells, int index) {
-    JsonNode cell = cells.get(index);
+    private String getCellText(JsonNode cells, int index) {
+        JsonNode cell = cells.get(index);
 
-    if (cell == null || !cell.isArray() || cell.size() == 0) {
-        return "";
+        if (cell == null || !cell.isArray() || cell.size() == 0) {
+            return "";
+        }
+
+        StringBuilder text = new StringBuilder();
+
+        for (JsonNode richText : cell) {
+            text.append(richText.path("plain_text").asText(""));
+        }
+
+        return text.toString();
     }
 
-    StringBuilder text = new StringBuilder();
-
-    for (JsonNode richText : cell) {
-        text.append(richText.path("plain_text").asText(""));
+    public List<ProjectItem> getProjectItems() throws Exception {
+        String json = getProjects();
+        return parseProjectItems(json);
     }
 
-    return text.toString();
-}
+    private List<ProjectItem> parseProjectItems(String json) throws Exception {
+        List<ProjectItem> projects = new ArrayList<>();
+        JsonNode root = objectMapper.readTree(json);
+        JsonNode results = root.path("results");
+
+        for (JsonNode page : results) {
+            JsonNode properties = page.path("properties");
+
+            String name = properties.path("Project").path("title").isArray()
+                    && properties.path("Project").path("title").size() > 0
+                    ? properties.path("Project").path("title").get(0).path("plain_text").asText("")
+                    : "";
+
+            String status = properties.path("Status").path("select").path("name").asText("");
+            String url = page.path("url").asText("");
+
+            projects.add(new ProjectItem(name, status, url));
+        }
+
+        return projects;
+    }
+
+    public String createTask(
+        String title,
+        String status,
+        String priority,
+        boolean focus,
+        String notes,
+        String projectId,
+        String workstreamId
+        ) throws Exception {
+
+        String body = """
+        {
+        "parent": {
+            "database_id": "%s"
+        },
+        "properties": {
+            "Task": {
+            "title": [
+                {
+                "text": {
+                    "content": "%s"
+                }
+                }
+            ]
+            },
+            "Project": {
+            "relation": [
+                {
+                "id": "%s"
+                }
+            ]
+            },
+            "Workstream": {
+            "relation": [
+                {
+                "id": "%s"
+                }
+            ]
+            },
+            "Status": {
+            "select": {
+                "name": "%s"
+            }
+            },
+            "Priority": {
+            "select": {
+                "name": "%s"
+            }
+            },
+            "Focus": {
+            "checkbox": %s
+            },
+            "Notes": {
+            "rich_text": [
+                {
+                "text": {
+                    "content": "%s"
+                }
+                }
+            ]
+            }
+        }
+        }
+        """.formatted(
+                NotionConfig.MASTER_TASKLIST_DATABASE_ID,
+                title,
+                projectId,
+                workstreamId,
+                status,
+                priority,
+                focus,
+                notes
+        );
+
+        HttpRequest request = baseRequest("https://api.notion.com/v1/pages")
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        return send(request);
+    }
+
+    public String createTaskByName(
+        String title,
+        String status,
+        String priority,
+        boolean focus,
+        String notes,
+        String projectName,
+        String workstreamName
+    ) throws Exception {
+
+        String projectId = findProjectIdByName(projectName);
+        String workstreamId = findWorkstreamIdByName(workstreamName);
+
+        return createTask(
+                title,
+                status,
+                priority,
+                focus,
+                notes,
+                projectId,
+                workstreamId
+        );
+    }
+
+    private String findProjectIdByName(String projectName) throws Exception {
+        String json = getProjects();
+        JsonNode root = objectMapper.readTree(json);
+        JsonNode results = root.path("results");
+
+        for (JsonNode page : results) {
+            JsonNode properties = page.path("properties");
+
+            String name = properties.path("Project").path("title").isArray()
+                    && properties.path("Project").path("title").size() > 0
+                    ? properties.path("Project").path("title").get(0).path("plain_text").asText("")
+                    : "";
+
+            if (name.equalsIgnoreCase(projectName)) {
+                return page.path("id").asText("");
+            }
+        }
+
+        throw new IllegalArgumentException("Project not found: " + projectName);
+    }
+
+    private String findWorkstreamIdByName(String workstreamName) throws Exception {
+        String json = getWorkstreams();
+        JsonNode root = objectMapper.readTree(json);
+        JsonNode results = root.path("results");
+
+        for (JsonNode page : results) {
+            JsonNode properties = page.path("properties");
+
+            String name = properties.path("Title").path("title").isArray()
+                    && properties.path("Title").path("title").size() > 0
+                    ? properties.path("Title").path("title").get(0).path("plain_text").asText("")
+                    : "";
+
+            if (name.equalsIgnoreCase(workstreamName)) {
+                return page.path("id").asText("");
+            }
+        }
+
+        throw new IllegalArgumentException("Workstream not found: " + workstreamName);
+    }
 
     private HttpRequest.Builder baseRequest(String url) {
         return HttpRequest.newBuilder()
