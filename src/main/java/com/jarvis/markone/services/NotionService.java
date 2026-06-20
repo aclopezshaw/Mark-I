@@ -504,6 +504,125 @@ public class NotionService {
         return send(request);
     }
 
+    public void generateTaskSummaryReport() throws Exception {
+        String json = getMasterTasklist();
+        JsonNode root = objectMapper.readTree(json);
+        JsonNode results = root.path("results");
+
+        int total = 0;
+
+        int active = 0;
+        int backlog = 0;
+        int complete = 0;
+
+        int critical = 0;
+        int high = 0;
+        int medium = 0;
+        int low = 0;
+
+        int focusCount = 0;
+        int missingProject = 0;
+        int missingWorkstream = 0;
+
+        for (JsonNode page : results) {
+            total++;
+
+            JsonNode properties = page.path("properties");
+
+            String status = properties.path("Status").path("select").path("name").asText("");
+            String priority = properties.path("Priority").path("select").path("name").asText("");
+            boolean focus = properties.path("Focus").path("checkbox").asBoolean(false);
+
+            int projectCount = properties.path("Project").path("relation").size();
+            int workstreamCount = properties.path("Workstream").path("relation").size();
+
+            if (status.equalsIgnoreCase("Active")) active++;
+            if (status.equalsIgnoreCase("Backlog")) backlog++;
+            if (status.equalsIgnoreCase("Complete")) complete++;
+
+            if (priority.equalsIgnoreCase("Critical")) critical++;
+            if (priority.equalsIgnoreCase("High")) high++;
+            if (priority.equalsIgnoreCase("Medium")) medium++;
+            if (priority.equalsIgnoreCase("Low")) low++;
+
+            if (focus) focusCount++;
+            if (projectCount == 0) missingProject++;
+            if (workstreamCount == 0) missingWorkstream++;
+        }
+
+        System.out.println();
+        System.out.println("=== MK1-009 Master Tasklist Summary Report ===");
+        System.out.println();
+        System.out.println("Total Tasks: " + total);
+        System.out.println();
+        System.out.println("By Status:");
+        System.out.println("- Active: " + active);
+        System.out.println("- Backlog: " + backlog);
+        System.out.println("- Complete: " + complete);
+        System.out.println();
+        System.out.println("By Priority:");
+        System.out.println("- Critical: " + critical);
+        System.out.println("- High: " + high);
+        System.out.println("- Medium: " + medium);
+        System.out.println("- Low: " + low);
+        System.out.println();
+        System.out.println("Focus Queue:");
+        System.out.println("- Focused Tasks: " + focusCount);
+        System.out.println();
+        System.out.println("Data Integrity:");
+        System.out.println("- Missing Project: " + missingProject);
+        System.out.println("- Missing Workstream: " + missingWorkstream);
+    }
+
+    public void printFieldNotes() throws Exception {
+        String json = getBlockChildren(NotionConfig.FIELD_NOTES_PAGE_ID);
+        JsonNode root = objectMapper.readTree(json);
+        JsonNode results = root.path("results");
+
+        System.out.println();
+        System.out.println("=== MK1-010 Field Notes Retrieval ===");
+        System.out.println();
+
+        for (JsonNode block : results) {
+            String type = block.path("type").asText("");
+
+            if (type.equals("paragraph")) {
+                printRichTextBlock(block, "paragraph");
+            } else if (type.equals("bulleted_list_item")) {
+                System.out.print("- ");
+                printRichTextBlock(block, "bulleted_list_item");
+            } else if (type.equals("numbered_list_item")) {
+                System.out.print("- ");
+                printRichTextBlock(block, "numbered_list_item");
+            } else if (type.equals("heading_1")) {
+                System.out.print("# ");
+                printRichTextBlock(block, "heading_1");
+            } else if (type.equals("heading_2")) {
+                System.out.print("## ");
+                printRichTextBlock(block, "heading_2");
+            } else if (type.equals("heading_3")) {
+                System.out.print("### ");
+                printRichTextBlock(block, "heading_3");
+            }
+        }
+    }
+
+    private void printRichTextBlock(JsonNode block, String type) {
+        JsonNode richText = block.path(type).path("rich_text");
+
+        if (!richText.isArray() || richText.size() == 0) {
+            return;
+        }
+
+        StringBuilder text = new StringBuilder();
+
+        for (JsonNode item : richText) {
+            text.append(item.path("plain_text").asText(""));
+        }
+
+        System.out.println(text);
+    }
+
     private HttpRequest.Builder baseRequest(String url) {
         return HttpRequest.newBuilder()
                 .uri(URI.create(url))

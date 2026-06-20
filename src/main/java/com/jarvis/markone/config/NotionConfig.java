@@ -12,4 +12,5 @@ public class NotionConfig {
     public static final String WORKOUT_LOG_DATABASE_ID = "376bc7d80f4580ac8510d9e19e8bb5f0";
     public static final String COURSES_DATABASE_ID = "375bc7d80f4580dc9573d313994da05c";
     public static final String ASSIGNMENTS_DATABASE_ID = "375bc7d80f45806eb974f80bed1ab944";
+    public static final String FIELD_NOTES_PAGE_ID = "383bc7d80f4580099caac9fd7c7e094e";
 }

@@ -77,17 +77,23 @@ public class Main {
                     "Complete"
             );
             System.out.println(mk7Result);
-            */
-
-           System.out.println();
+            
+            System.out.println();
             System.out.println("=== MK1-008 Test ===");
-
             String focusResult = notionService.updateTaskFocus(
                     "385bc7d80f45813fada4f78611656975",
                     true
             );
-
             System.out.println(focusResult);
+            */
+
+           System.out.println();
+            System.out.println("=== MK1-009 Test ===");
+            notionService.generateTaskSummaryReport();
+
+            System.out.println();
+            System.out.println("=== MK1-010 Test ===");
+            notionService.printFieldNotes();
 
             System.out.println();
             System.out.println("=== Workout Log ===");

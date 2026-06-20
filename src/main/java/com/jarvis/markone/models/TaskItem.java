@@ -19,4 +19,24 @@ public class TaskItem {
     public String toString() {
         return "- " + name + " | Status: " + status + " | Priority: " + priority + " | Focus: " + focus;
     }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public boolean isFocus() {
+        return focus;
+    }
+
+    public String getUrl() {
+        return url;
+    }
 }
